@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BriSharks Student Feedback Framework</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse for CSV reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brishark: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sentiment-radio:checked + label {
+            background-color: #0ea5e9;
+            color: white;
+            border-color: #0ea5e9;
+        }
+        .sentiment-radio-bad:checked + label { background-color: #ef4444; border-color: #ef4444; color: white;}
+        .sentiment-radio-notsat:checked + label { background-color: #f97316; border-color: #f97316; color: white;}
+        .sentiment-radio-couldbe:checked + label { background-color: #eab308; border-color: #eab308; color: white;}
+        .sentiment-radio-sat:checked + label { background-color: #84cc16; border-color: #84cc16; color: white;}
+        .sentiment-radio-good:checked + label { background-color: #22c55e; border-color: #22c55e; color: white;}
+        
+        /* Hide scrollbar for clean look but allow scrolling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; rounded: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-brishark-900 text-white p-6 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    BriSharks Feedback Framework
+                </h1>
+                <p class="text-brishark-100 text-sm mt-1">Student Interview & Sentiment Analysis Tool</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="bg-brishark-800 px-4 py-2 rounded-lg text-sm flex items-center">
+                    Feedbacks: <span id="feedback-count" class="font-bold text-xl ml-2">0</span>
+                </div>
+                <button onclick="toggleView('dashboard')" id="btn-dashboard" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Analytics
+                </button>
+                <button onclick="toggleView('interview')" id="btn-interview" class="bg-brishark-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow flex items-center gap-2 hidden">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    Interview
+                </button>
+                <button onclick="exportAllData()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- INTERVIEW VIEW -->
+    <main id="view-interview" class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Sidebar: Setup & Student Selection -->
+        <div class="lg:col-span-4 space-y-6">
+            
+            <!-- Step 1: Upload CSV -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="bg-brishark-100 text-brishark-800 w-6 h-6 rounded-full flex items-center justify-center text-sm">1</span> 
+                    Upload Student Data
+                </h2>
+                <label class="block w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition">
+                    <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <span class="text-sm text-gray-600">Click to upload CSV</span>
+                    <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSVUpload(event)">
+                </label>
+                <p id="upload-status" class="text-xs text-green-600 mt-2 font-medium hidden">✓ CSV Loaded Successfully</p>
+            </div>
+
+            <!-- Step 2: Select Student -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200" id="student-selector-card" style="opacity: 0.5; pointer-events: none;">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="bg-brishark-100 text-brishark-800 w-6 h-6 rounded-full flex items-center justify-center text-sm">2</span> 
+                    Select Student
+                </h2>
+                <select id="student-dropdown" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 focus:ring-brishark-500 focus:border-brishark-500" onchange="loadStudentData()">
+                    <option value="">-- Waiting for CSV Upload --</option>
+                </select>
+
+                <!-- Student Info Display Grid -->
+                <div id="student-info" class="mt-4 hidden">
+                    <h3 class="text-sm font-bold text-brishark-800 border-b pb-2 mb-3">Interviewee Details</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Name</span><br><span id="info-name" class="font-medium text-gray-700"></span></div>
+                        <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">ID</span><br><span id="info-id" class="font-medium text-gray-700"></span></div>
+                        
+                        <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Email</span><br><span id="info-email" class="font-medium text-gray-700 truncate block"></span></div>
+                        
+                        <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Mobile</span><br><span id="info-mobile" class="font-medium text-gray-700"></span></div>
+                        <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Grade & Age</span><br><span id="info-grade-age" class="font-medium text-gray-700"></span></div>
+                        
+                        <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Location</span><br><span id="info-location" class="font-medium text-gray-700 truncate block"></span></div>
+                        
+                        <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Website (Optional)</span><br><span id="info-website" class="font-medium text-gray-500 italic break-all block"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Interview Form -->
+        <div class="lg:col-span-8">
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200" id="interview-form-card" style="opacity: 0.5; pointer-events: none;">
+                <div class="flex justify-between items-end mb-6 border-b pb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-brishark-100 text-brishark-800 w-8 h-8 rounded-full flex items-center justify-center text-lg">3</span> 
+                        Interview Form
+                        <span id="draft-indicator" class="text-xs text-green-500 font-medium ml-2 hidden">✓ Draft Autosaved</span>
+                    </h2>
+                    <span class="text-sm text-gray-500 italic">Interviewing: <span id="current-interviewee" class="font-bold text-brishark-600">None selected</span></span>
+                </div>
+
+                <form id="feedbackForm" onsubmit="saveFeedback(event)">
+                    
+                    <!-- Section 1: Feature Ratings -->
+                    <div class="mb-8">
+                        <div class="bg-brishark-50 border-l-4 border-brishark-500 p-4 mb-6 rounded-r-lg">
+                            <h3 class="text-lg font-bold text-brishark-900">1. Feature Ratings (Sentiment Analysis)</h3>
+                            <p class="text-sm text-gray-600">Select the sentiment category for specific parts of the platform.</p>
+                        </div>
+                        
+                        <div class="space-y-6" id="sentiment-questions-container">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Section 2: MOM Questions -->
+                    <div class="mb-8">
+                        <div class="bg-purple-50 border-l-4 border-purple-500 p-4 mb-6 rounded-r-lg">
+                            <h3 class="text-lg font-bold text-purple-900">2. Platform Usage & The "Aha!" Moment (MOM)</h3>
+                            <p class="text-sm text-gray-600">Understand the student's timeline and value realization.</p>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">When was the last time you logged into BriSharks?</label>
+                                <input type="text" id="q_last_login" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="e.g., Yesterday, last week...">
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">When did your business idea first 'click' in your mind? Was it before you joined, or while working on the platform?</label>
+                                <textarea id="q_aha_moment" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="Student's answer..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">At which chapter or stage did you start analyzing your idea to see if it would actually work in the real world?</label>
+                                <input type="text" id="q_analysis_stage" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="e.g., Chapter 3, Market Research...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: PMF & Emotion -->
+                    <div class="mb-8">
+                        <div class="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 rounded-r-lg">
+                            <h3 class="text-lg font-bold text-orange-900">3. Product-Market Fit & Emotion (PMF)</h3>
+                            <p class="text-sm text-gray-600">Reveal if kids feel supported and proud of their build.</p>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">While building your idea, did you feel a sense of comfort that BriSharks was the exact platform you needed? Why?</label>
+                                <textarea id="q_comfort_fit" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500" placeholder="Student's answer..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">Did you ever get stuck on a lesson and wish you had a real person to help? If yes, where did you get stuck?</label>
+                                <textarea id="q_mentor_need" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500" placeholder="Student's answer..."></textarea>
+                            </div>
+                            <div id="container_shared_friends">
+                                <label class="block font-medium text-gray-700 mb-1">Have you shared your startup website with your friends? What was their reaction?</label>
+                                <textarea id="q_shared_friends" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500" placeholder="Student's answer..."></textarea>
+                            </div>
+                            <div id="container_share_plan" class="hidden">
+                                <label class="block font-medium text-gray-700 mb-1">Since you don't have a website yet, who do you plan to share your startup idea with once it's ready?</label>
+                                <textarea id="q_share_plan" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500" placeholder="Student's answer..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">Do you feel that this platform successfully helped you launch a real startup?</label>
+                                <select id="q_success_feeling" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500">
+                                    <option value="">Select an option...</option>
+                                    <option value="Yes, absolutely">Yes, absolutely</option>
+                                    <option value="Yes, somewhat">Yes, somewhat</option>
+                                    <option value="Not really">Not really</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Growth -->
+                    <div class="mb-8">
+                        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-lg">
+                            <h3 class="text-lg font-bold text-green-900">4. Growth & Referrals</h3>
+                            <p class="text-sm text-gray-600">How kids talk about the app and feature requests.</p>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">How would you describe BriSharks to a friend? What is BriSharks to you?</label>
+                                <textarea id="q_describe_friend" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-green-500 focus:border-green-500" placeholder="Student's answer..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">What new features or tools do you need to make BriSharks even more helpful for you?</label>
+                                <textarea id="q_new_features" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-green-500 focus:border-green-500" placeholder="Student's answer..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Journey & Roadblocks (NEW) -->
+                    <div class="mb-8">
+                        <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-r-lg">
+                            <h3 class="text-lg font-bold text-indigo-900">5. Journey Status & Roadblocks</h3>
+                            <p class="text-sm text-gray-600">Track if they finished the program or where they are getting stuck.</p>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">Current Journey Status</label>
+                                <select id="q_journey_status" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">Select status...</option>
+                                    <option value="Completed">Completed Startup</option>
+                                    <option value="In Progress">In Progress (Doing well)</option>
+                                    <option value="Stuck">Stuck / Blocked</option>
+                                    <option value="Dropped Out">Dropped Out / Not Started</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">If Completed: What was the most rewarding part of reaching the finish line?</label>
+                                <textarea id="q_completed_reward" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Student's answer..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">If Stuck: Where exactly did you get stuck, and what stopped you from moving forward?</label>
+                                <textarea id="q_stuck_reason" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., Chapter 4, didn't understand the pitch..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 6: Follow Up (Renamed from 5) -->
+                    <div class="mb-8">
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg">
+                            <h3 class="text-lg font-bold text-red-900">6. Follow-up & Reminders</h3>
+                                <input type="text" id="q_followup_notes" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-red-500 focus:border-red-500" placeholder="e.g., Call back to discuss new feature...">
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 mb-1">Schedule Call Time (Optional)</label>
+                                <input type="datetime-local" id="q_followup_time" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-red-500 focus:border-red-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t flex justify-end">
+                        <button type="submit" class="bg-brishark-600 hover:bg-brishark-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-transform transform hover:-translate-y-0.5">
+                            Save Feedback Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- DASHBOARD VIEW (Hidden by default) -->
+    <main id="view-dashboard" class="max-w-7xl mx-auto p-6 hidden">
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-brishark-900 mb-2">Feedback Analytics Dashboard</h2>
+            <p class="text-gray-600">Real-time breakdown of student sentiment across platform features.</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-center">
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Total Interviews</p>
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-100 p-2 rounded-lg text-blue-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </div>
+                    <p class="text-3xl font-black text-gray-800" id="dash-total-interviews">0</p>
+                </div>
+            </div>
+
+            <!-- NEW: NPS Card -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-center relative overflow-hidden">
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Overall NPS Score</p>
+                <div class="flex items-center gap-3 z-10">
+                    <p class="text-3xl font-black text-gray-800" id="dash-nps-score">-</p>
+                    <span id="dash-nps-badge" class="px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-600 shadow-sm">Need Data</span>
+                </div>
+                <div id="dash-nps-bg" class="absolute right-0 bottom-0 w-16 h-16 rounded-tl-full opacity-20 bg-gray-300"></div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-center">
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Most Common Sentiment</p>
+                <div class="flex items-center gap-3">
+                    <p class="text-lg font-bold text-gray-800" id="dash-overall-sentiment">Need Data</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col justify-center">
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Needs Improvement</p>
+                <div class="flex items-center gap-3">
+                    <p class="text-lg font-bold text-gray-800" id="dash-needs-improvement">Need Data</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW: Journey Status Analytics -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="journey-analytics" style="display: none;">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+                <h3 class="text-md font-bold text-gray-800 mb-4">Journey Completion</h3>
+                <div class="relative flex-grow min-h-[200px]">
+                    <canvas id="chart-journey"></canvas>
+                </div>
+            </div>
+            <div class="md:col-span-2 bg-red-50 rounded-xl shadow-sm border border-red-100 p-6 h-64 overflow-y-auto">
+                <h3 class="text-md font-bold text-red-900 mb-3 sticky top-0 bg-red-50 py-1 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    Identified Roadblocks (Stuck Users)
+                </h3>
+                <div id="stuck-quotes" class="space-y-3">
+                    <!-- Roadblock quotes injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Qualitative Analysis Section -->
+        <div class="mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-200" id="qualitative-section" style="display: none;">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                        Qualitative Text Analysis
+                    </h3>
+                    <p class="text-sm text-gray-500 mt-1">Automatic keyword extraction from open-ended MOM & PMF questions.</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2">Top Repeated Themes</h4>
+                    <div id="keyword-cloud" class="flex flex-wrap gap-2">
+                        <!-- Keywords injected here -->
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 h-64 overflow-y-auto">
+                    <h4 class="text-sm font-bold text-gray-700 mb-3 sticky top-0 bg-gray-50 py-1">Recent Student Quotes</h4>
+                    <div id="recent-quotes" class="space-y-3">
+                        <!-- Quotes injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="charts-container">
+            <!-- Charts will be dynamically injected here -->
+        </div>
+        
+        <!-- Empty State Note -->
+        <div id="chart-empty-state" class="text-center py-12 text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <p>Save at least one feedback entry to generate analysis charts.</p>
+        </div>
+    </main>
+
+    <script>
+        let studentsData = [];
+        let feedbackRecords = [];
+        let currentStudent = null;
+        let chartsInstance = {}; // Store charts for updates
+
+        const commonSentimentQs = [
+            { id: 'f_smoothness', label: 'Smoothness: "How smooth and easy is it to use the BriSharks platform?"' },
+            { id: 'f_video', label: 'Engagement of Video: "How fun and interesting are the lesson videos?"' },
+            { id: 'f_pitch', label: 'Pitch Data Gathering: "How easy was it to gather data and build your Pitch?"' }
+        ];
+
+        const webSentimentQs = [
+            { id: 'f_website', label: 'Rate your Website: "How much do you love the startup website you built?"' },
+            { id: 'f_founder', label: 'Rate your Founder Page: "How cool is your Founder Profile page?"' }
+        ];
+
+        const noWebSentimentQs = [
+            { id: 'f_clarity', label: 'Platform Clarity: "How clear are the steps to build your startup website?"' },
+            { id: 'f_excitement', label: 'Excitement: "How excited are you to finish and launch your website?"' }
+        ];
+
+        const allSentimentQuestions = [...commonSentimentQs, ...webSentimentQs, ...noWebSentimentQs];
+
+        const sentimentOptions = [
+            { val: 'Bad', class: 'sentiment-radio-bad' },
+            { val: 'Not Satisfied', class: 'sentiment-radio-notsat' },
+            { val: 'Could be better', class: 'sentiment-radio-couldbe' },
+            { val: 'Satisfied', class: 'sentiment-radio-sat' },
+            { val: 'Good', class: 'sentiment-radio-good' }
+        ];
+
+        // Initialize UI
+        function initUI() {
+            // Restore saved data from LocalStorage on page load
+            const savedData = localStorage.getItem('brisharks_feedbacks');
+            if (savedData) {
+                try {
+                    feedbackRecords = JSON.parse(savedData);
+                    document.getElementById('feedback-count').textContent = feedbackRecords.length;
+                    updateDashboardData();
+                } catch(e) {
+                    console.error("Failed to parse saved feedback", e);
+                }
+            }
+
+            // Restore cached CSV to prevent needing to re-upload on refresh
+            const savedCsv = localStorage.getItem('brisharks_students_csv');
+            if (savedCsv) {
+                try {
+                    studentsData = JSON.parse(savedCsv);
+                    const uploadStatus = document.getElementById('upload-status');
+                    uploadStatus.textContent = "✓ Previous CSV Restored from memory";
+                    uploadStatus.classList.remove('hidden');
+                    populateStudentDropdown();
+                    enableSection('student-selector-card');
+                } catch(e) {
+                    console.warn("Could not load cached CSV", e);
+                }
+            }
+
+            // Setup Form Draft Autosave Listeners
+            const form = document.getElementById('feedbackForm');
+            form.addEventListener('input', scheduleDraftSave);
+            form.addEventListener('change', scheduleDraftSave);
+
+            // Sentiment questions will now be dynamically injected based on the selected student
+            document.getElementById('sentiment-questions-container').innerHTML = '<p class="text-sm text-gray-500 italic">Please select a student to load their specific form questions.</p>';
+        }
+
+        // Handle CSV Upload
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                transformHeader: function(header) {
+                    // Convert headers to lowercase to handle "Website" or "website" safely
+                    return header.trim().toLowerCase();
+                },
+                complete: function(results) {
+                    studentsData = results.data;
+                    
+                    // Cache the CSV so it survives page refreshes
+                    try {
+                        localStorage.setItem('brisharks_students_csv', JSON.stringify(studentsData));
+                    } catch (e) {
+                        console.warn("CSV is too large to cache locally.");
+                    }
+
+                    const uploadStatus = document.getElementById('upload-status');
+                    uploadStatus.textContent = "✓ CSV Loaded Successfully";
+                    uploadStatus.classList.remove('hidden');
+                    populateStudentDropdown();
+                    enableSection('student-selector-card');
+                }
+            });
+        }
+
+        function populateStudentDropdown() {
+            const dropdown = document.getElementById('student-dropdown');
+            dropdown.innerHTML = '<option value="">-- Select a Student to Interview --</option>';
+            
+            const now = new Date().getTime();
+
+            studentsData.forEach(student => {
+                // Handle different possible keys due to CSV formats
+                const id = student.id || student.ID;
+                const fname = student.first_name || student['First Name'] || '';
+                const lname = student.last_name || student['Last Name'] || '';
+                if(id) {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    
+                    // Check if this student already has a saved feedback entry in LocalStorage
+                    const existingRecord = feedbackRecords.find(r => r.student_id == id);
+                    let statusIndicator = "";
+                    
+                    if (existingRecord) {
+                        if (existingRecord.q_followup_time) {
+                            const callTime = new Date(existingRecord.q_followup_time).getTime();
+                            if (callTime > now && !existingRecord.reminder_sent) {
+                                statusIndicator = "🔴 [CALL SCHEDULED] "; // Future Call
+                            } else {
+                                statusIndicator = "🟢 [DONE] "; // Call time passed or already finished
+                            }
+                        } else {
+                            statusIndicator = "🟢 [DONE] "; // No call scheduled, just completed
+                        }
+                    }
+
+                    option.textContent = `${statusIndicator}[ID: ${id}] ${fname} ${lname}`;
+                    dropdown.appendChild(option);
+                }
+            });
+        }
+
+        function loadStudentData() {
+            const dropdown = document.getElementById('student-dropdown');
+            const selectedId = dropdown.value;
+            
+            if (!selectedId) {
+                document.getElementById('student-info').classList.add('hidden');
+                document.getElementById('current-interviewee').textContent = "None selected";
+                disableSection('interview-form-card');
+                currentStudent = null;
+                return;
+            }
+
+            currentStudent = studentsData.find(s => (s.id || s.ID) == selectedId);
+            
+            if (currentStudent) {
+                const fname = currentStudent.first_name || currentStudent['First Name'] || '';
+                const lname = currentStudent.last_name || currentStudent['Last Name'] || '';
+                
+                document.getElementById('info-name').textContent = `${fname} ${lname}`;
+                document.getElementById('info-id').textContent = currentStudent.id || currentStudent.ID;
+                document.getElementById('info-email').textContent = currentStudent.email || currentStudent.Email || 'N/A';
+                document.getElementById('info-mobile').textContent = currentStudent.mobile || currentStudent.Mobile || 'N/A';
+                
+                // Location formatting
+                const city = currentStudent.city || currentStudent.City || '';
+                const state = currentStudent.state || currentStudent.State || '';
+                const country = currentStudent.country_id || currentStudent.Country || 'India';
+                document.getElementById('info-location').textContent = [city, state, country].filter(Boolean).join(', ') || 'N/A';
+
+                // Handle Website gracefully
+                const websiteVal = currentStudent.website || currentStudent.Website || '';
+                const websiteEl = document.getElementById('info-website');
+                
+                let hasWebsite = false;
+                if(websiteVal && websiteVal.trim() !== '') {
+                    hasWebsite = true;
+                    websiteEl.textContent = ''; // clear text
+                    const a = document.createElement('a');
+                    a.href = websiteVal.startsWith('http') ? websiteVal : `https://${websiteVal}`;
+                    a.target = '_blank';
+                    a.className = 'text-brishark-600 hover:underline cursor-pointer block truncate';
+                    a.textContent = websiteVal;
+                    websiteEl.appendChild(a);
+                    
+                    // Show website specific questions
+                    document.getElementById('container_shared_friends').classList.remove('hidden');
+                    document.getElementById('container_share_plan').classList.add('hidden');
+                } else {
+                    websiteEl.textContent = 'No website provided';
+                    websiteEl.className = 'font-medium text-gray-500 italic break-all block';
+                    
+                    // Show NO-website specific questions
+                    document.getElementById('container_shared_friends').classList.add('hidden');
+                    document.getElementById('container_share_plan').classList.remove('hidden');
+                }
+
+                document.getElementById('info-grade-age').textContent = `Gr: ${currentStudent.grade || '-'} / Age: ${currentStudent.age || '-'}`;
+
+                document.getElementById('student-info').classList.remove('hidden');
+                document.getElementById('current-interviewee').textContent = `${fname} ${lname}`;
+                
+                // Dynamically build sentiment ratings based on website presence
+                const activeQs = hasWebsite ? [...commonSentimentQs, ...webSentimentQs] : [...commonSentimentQs, ...noWebSentimentQs];
+                const container = document.getElementById('sentiment-questions-container');
+                container.innerHTML = '';
+                
+                activeQs.forEach(q => {
+                    let html = `<div class="bg-white p-4 border rounded-lg shadow-sm">
+                                    <label class="block font-semibold text-gray-800 mb-3">${q.label}</label>
+                                    <div class="flex flex-wrap gap-2">`;
+                    
+                    sentimentOptions.forEach((opt, idx) => {
+                        const uniqueId = `${q.id}_${idx}`;
+                        html += `
+                            <div class="flex-1 min-w-[120px]">
+                                <input type="radio" id="${uniqueId}" name="${q.id}" value="${opt.val}" class="hidden sentiment-radio ${opt.class}">
+                                <label for="${uniqueId}" class="block text-center px-2 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-sm font-medium transition-colors">
+                                    ${opt.val}
+                                </label>
+                            </div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                    container.innerHTML += html;
+                });
+
+                enableSection('interview-form-card');
+                document.getElementById('feedbackForm').reset();
+                document.getElementById('draft-indicator').classList.add('hidden');
+
+                // Restore Draft if it exists for this student
+                const draftStr = localStorage.getItem(`brisharks_draft_${selectedId}`);
+                if (draftStr) {
+                    try {
+                        const draft = JSON.parse(draftStr);
+                        document.getElementById('q_last_login').value = draft.q_last_login || '';
+                        document.getElementById('q_aha_moment').value = draft.q_aha_moment || '';
+                        document.getElementById('q_analysis_stage').value = draft.q_analysis_stage || '';
+                        document.getElementById('q_comfort_fit').value = draft.q_comfort_fit || '';
+                        document.getElementById('q_mentor_need').value = draft.q_mentor_need || '';
+                        document.getElementById('q_shared_friends').value = draft.q_shared_friends || '';
+                        document.getElementById('q_share_plan').value = draft.q_share_plan || '';
+                        document.getElementById('q_success_feeling').value = draft.q_success_feeling || '';
+                        document.getElementById('q_describe_friend').value = draft.q_describe_friend || '';
+                        document.getElementById('q_new_features').value = draft.q_new_features || '';
+                        document.getElementById('q_followup_notes').value = draft.q_followup_notes || '';
+                        document.getElementById('q_followup_time').value = draft.q_followup_time || '';
+                        
+                        document.getElementById('q_journey_status').value = draft.q_journey_status || '';
+                        document.getElementById('q_completed_reward').value = draft.q_completed_reward || '';
+                        document.getElementById('q_stuck_reason').value = draft.q_stuck_reason || '';
+                        
+                        if (draft.q_nps_score) {
+                            const r = document.querySelector(`input[name="q_nps_score"][value="${draft.q_nps_score}"]`);
+                            if (r) r.checked = true;
+                        }
+                        
+                        allSentimentQuestions.forEach(q => {
+                            if (draft[q.id]) {
+                                const r = document.querySelector(`input[name="${q.id}"][value="${draft[q.id]}"]`);
+                                if (r) r.checked = true;
+                            }
+                        });
+                        
+                        const indicator = document.getElementById('draft-indicator');
+                        indicator.textContent = "✓ Draft Restored";
+                        indicator.classList.remove('hidden');
+                    } catch(e) { console.warn("Failed to parse draft", e); }
+                }
+            }
+        }
+
+        function saveFeedback(event) {
+            event.preventDefault();
+            if (!currentStudent) return;
+
+            // Gather Data
+            let entry = {
+                // KEEP all original CSV data (role_id, timezone, site_id, etc.)
+                ...currentStudent,
+
+                // Store original student details for export
+                student_id: currentStudent.id || currentStudent.ID,
+                student_name: `${currentStudent.first_name || currentStudent['First Name'] || ''} ${currentStudent.last_name || currentStudent['Last Name'] || ''}`.trim(),
+                student_email: currentStudent.email || currentStudent.Email || '',
+                student_mobile: currentStudent.mobile || currentStudent.Mobile || '',
+                student_grade: currentStudent.grade || currentStudent.Grade || '',
+                student_age: currentStudent.age || currentStudent.Age || '',
+                student_website: currentStudent.website || currentStudent.Website || '',
+                timestamp: new Date().toISOString(),
+                
+                // NEW: NPS Score
+                q_nps_score: document.querySelector('input[name="q_nps_score"]:checked') ? document.querySelector('input[name="q_nps_score"]:checked').value : 'Not Answered',
+
+                // Text Questions
+                q_last_login: document.getElementById('q_last_login').value,
+                q_aha_moment: document.getElementById('q_aha_moment').value,
+                q_analysis_stage: document.getElementById('q_analysis_stage').value,
+                q_comfort_fit: document.getElementById('q_comfort_fit').value,
+                q_mentor_need: document.getElementById('q_mentor_need').value,
+                q_shared_friends: document.getElementById('q_shared_friends').value,
+                q_share_plan: document.getElementById('q_share_plan').value,
+                q_success_feeling: document.getElementById('q_success_feeling').value,
+                q_describe_friend: document.getElementById('q_describe_friend').value,
+                q_new_features: document.getElementById('q_new_features').value,
+                
+                // Journey Data
+                q_journey_status: document.getElementById('q_journey_status').value,
+                q_completed_reward: document.getElementById('q_completed_reward').value,
+                q_stuck_reason: document.getElementById('q_stuck_reason').value,
+
+                // Follow up / Alarm
+                q_followup_notes: document.getElementById('q_followup_notes').value,
+                q_followup_time: document.getElementById('q_followup_time').value,
+                reminder_sent: false // Flag to ensure email only sends once
+            };
+
+            // Gather Sentiment Radio values safely
+            allSentimentQuestions.forEach(q => {
+                const selected = document.querySelector(`input[name="${q.id}"]:checked`);
+                entry[q.id] = selected ? selected.value : 'Not Answered / NA';
+            });
+
+            feedbackRecords.push(entry);
+            document.getElementById('feedback-count').textContent = feedbackRecords.length;
+            
+            // Save to frontend LocalStorage to prevent data loss
+            localStorage.setItem('brisharks_feedbacks', JSON.stringify(feedbackRecords));
+            
+            // Clear the auto-saved draft now that it's permanently saved
+            const studentId = currentStudent.id || currentStudent.ID;
+            localStorage.removeItem(`brisharks_draft_${studentId}`);
+            document.getElementById('draft-indicator').classList.add('hidden');
+            
+            // Visual success indicator
+            const btn = event.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.textContent = "✓ Saved Successfully!";
+            btn.classList.replace('bg-brishark-600', 'bg-green-500');
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.classList.replace('bg-green-500', 'bg-brishark-600');
+                
+                // Refresh the dropdown to instantly show the 🟢 or 🔴 status indicator
+                populateStudentDropdown();
+                
+                // Reset form and select next student
+                document.getElementById('feedbackForm').reset();
+                const dropdown = document.getElementById('student-dropdown');
+                if(dropdown.selectedIndex < dropdown.options.length - 1) {
+                    dropdown.selectedIndex += 1;
+                    loadStudentData();
+                } else {
+                    dropdown.selectedIndex = 0;
+                    loadStudentData();
+                }
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                
+                // Update dashboard data in background
+                updateDashboardData();
+            }, 1500);
+        }
+
+        function toggleView(view) {
+            const interviewView = document.getElementById('view-interview');
+            const dashboardView = document.getElementById('view-dashboard');
+            const btnDashboard = document.getElementById('btn-dashboard');
+            const btnInterview = document.getElementById('btn-interview');
+
+            if (view === 'dashboard') {
+                interviewView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+                btnDashboard.classList.add('hidden');
+                btnInterview.classList.remove('hidden');
+                initOrUpdateCharts();
+            } else {
+                dashboardView.classList.add('hidden');
+                interviewView.classList.remove('hidden');
+                btnInterview.classList.add('hidden');
+                btnDashboard.classList.remove('hidden');
+            }
+        }
+
+        const sentimentColors = {
+            'Bad': '#ef4444',
+            'Not Satisfied': '#f97316',
+            'Could be better': '#eab308',
+            'Satisfied': '#84cc16',
+            'Good': '#22c55e'
+        };
+
+        function initOrUpdateCharts() {
+            document.getElementById('dash-total-interviews').textContent = feedbackRecords.length;
+            
+            const emptyState = document.getElementById('chart-empty-state');
+            const container = document.getElementById('charts-container');
+            const qualSection = document.getElementById('qualitative-section');
+            
+            if (feedbackRecords.length === 0) {
+                emptyState.classList.remove('hidden');
+                container.innerHTML = '';
+                qualSection.style.display = 'none';
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            container.innerHTML = ''; // Reset charts container
+            qualSection.style.display = 'block';
+            chartsInstance = {}; // Clear instances
+
+            // 1. Calculations Data Stores
+            let totalSentiments = { 'Bad': 0, 'Not Satisfied': 0, 'Could be better': 0, 'Satisfied': 0, 'Good': 0 };
+            let questionScores = {};
+            let promoters = 0, passives = 0, detractors = 0, npsCount = 0;
+            let combinedText = [];
+            let quotesHTML = "";
+            let journeyCounts = { 'Completed': 0, 'In Progress': 0, 'Stuck': 0, 'Dropped Out': 0 };
+            let stuckHTML = "";
+            let hasJourneyData = false;
+
+            allSentimentQuestions.forEach(q => {
+                questionScores[q.id] = { 'Bad': 0, 'Not Satisfied': 0, 'Could be better': 0, 'Satisfied': 0, 'Good': 0 };
+            });
+
+            feedbackRecords.forEach(record => {
+                // Sentiments
+                allSentimentQuestions.forEach(q => {
+                    let answer = record[q.id];
+                    if (sentimentColors[answer]) {
+                        questionScores[q.id][answer]++;
+                        totalSentiments[answer]++;
+                    }
+                });
+
+                // NPS Math
+                if(record.q_nps_score !== 'Not Answered') {
+                    let score = parseInt(record.q_nps_score);
+                    npsCount++;
+                    if(score >= 9) promoters++;
+                    else if(score <= 6) detractors++;
+                    else passives++;
+                }
+
+                // Gather Text for Qualitative Analysis
+                const textAnswers = [record.q_aha_moment, record.q_comfort_fit, record.q_new_features, record.q_describe_friend].filter(t => t && t.trim().length > 3);
+                if (textAnswers.length > 0) {
+                    combinedText.push(...textAnswers);
+                    quotesHTML += `
+                        <div class="bg-white p-3 rounded shadow-sm border border-gray-100 text-sm">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-brishark-800">${record.student_name}</span> 
+                                <span class="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded font-bold">NPS: ${record.q_nps_score}</span>
+                            </div>
+                            <p class="text-gray-600 italic">"${textAnswers[0]}"</p>
+                        </div>`;
+                }
+
+                // Journey Data Analysis
+                if(record.q_journey_status && record.q_journey_status !== "") {
+                    hasJourneyData = true;
+                    if(journeyCounts[record.q_journey_status] !== undefined) {
+                        journeyCounts[record.q_journey_status]++;
+                    }
+                }
+                if(record.q_journey_status === 'Stuck' && record.q_stuck_reason && record.q_stuck_reason.trim().length > 0) {
+                    stuckHTML += `
+                        <div class="bg-white p-3 rounded shadow-sm border border-red-200 text-sm">
+                            <span class="font-bold text-red-800 block mb-1">${record.student_name}</span> 
+                            <p class="text-gray-700 italic">"${record.q_stuck_reason}"</p>
+                        </div>`;
+                }
+            });
+
+            // Update NPS UI
+            const npsEl = document.getElementById('dash-nps-score');
+            const npsBadge = document.getElementById('dash-nps-badge');
+            const npsBg = document.getElementById('dash-nps-bg');
+            
+            if (npsCount > 0) {
+                let nps = Math.round(((promoters / npsCount) - (detractors / npsCount)) * 100);
+                npsEl.textContent = nps;
+                
+                if(nps > 30) {
+                    npsEl.className = "text-3xl font-black text-green-600";
+                    npsBadge.className = "px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 shadow-sm";
+                    npsBadge.textContent = "Excellent";
+                    npsBg.className = "absolute right-0 bottom-0 w-16 h-16 rounded-tl-full opacity-20 bg-green-500";
+                } else if (nps > 0) {
+                    npsEl.className = "text-3xl font-black text-yellow-600";
+                    npsBadge.className = "px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700 shadow-sm";
+                    npsBadge.textContent = "Good";
+                    npsBg.className = "absolute right-0 bottom-0 w-16 h-16 rounded-tl-full opacity-20 bg-yellow-500";
+                } else {
+                    npsEl.className = "text-3xl font-black text-red-600";
+                    npsBadge.className = "px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 shadow-sm";
+                    npsBadge.textContent = "Needs Work";
+                    npsBg.className = "absolute right-0 bottom-0 w-16 h-16 rounded-tl-full opacity-20 bg-red-500";
+                }
+            }
+
+            // Update Qualitative UI (Word Cloud)
+            const stopWords = ['the','a','an','and','or','but','in','on','at','to','for','of','with','by','about','like','through','over','before','between','after','since','without','under','within','along','following','across','behind','beyond','plus','except','but','up','out','around','down','off','above','near','i','you','he','she','it','we','they','me','him','her','us','them','my','your','his','its','our','their','this','that','these','those','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','shall','should','can','could','may','might','must','what','who','whom','whose','which','how','why','when','where','very','too','really','just','not','no','yes','so','much','because','some','any','all','get','got','make','made'];
+            
+            let words = combinedText.join(' ').toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
+            let counts = {};
+            words.forEach(w => {
+                if(w.length > 3 && !stopWords.includes(w)) { counts[w] = (counts[w] || 0) + 1; }
+            });
+            
+            let topKeywords = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 15);
+            let keywordHTML = topKeywords.map(k => `<span class="bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full text-sm font-medium border border-purple-200 shadow-sm">${k[0]} <span class="bg-purple-200 text-purple-800 text-xs px-1.5 py-0.5 rounded-full ml-1">${k[1]}</span></span>`).join('');
+            
+            document.getElementById('keyword-cloud').innerHTML = keywordHTML || '<span class="text-gray-400 text-sm italic">Not enough text data to extract themes yet.</span>';
+            document.getElementById('recent-quotes').innerHTML = quotesHTML || '<span class="text-gray-400 text-sm italic">No qualitative answers recorded yet.</span>';
+
+            // Update Journey Status UI
+            const journeySection = document.getElementById('journey-analytics');
+            if (hasJourneyData) {
+                journeySection.style.display = 'grid';
+                document.getElementById('stuck-quotes').innerHTML = stuckHTML || '<span class="text-gray-500 text-sm italic">No roadblocks recorded yet.</span>';
+                
+                const jCtx = document.getElementById('chart-journey').getContext('2d');
+                chartsInstance['journey'] = new Chart(jCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Completed', 'In Progress', 'Stuck', 'Dropped Out'],
+                        datasets: [{
+                            data: [journeyCounts['Completed'], journeyCounts['In Progress'], journeyCounts['Stuck'], journeyCounts['Dropped Out']],
+                            backgroundColor: ['#22c55e', '#3b82f6', '#ef4444', '#9ca3af'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { position: 'right', labels: { boxWidth: 12, font: {size: 10} } } 
+                        }
+                    }
+                });
+            } else {
+                journeySection.style.display = 'none';
+            }
+
+            // 2. Find most common overall sentiment
+            let mostPositive = 0;
+            let bestSentiment = "Need Data";
+            Object.keys(totalSentiments).forEach(key => {
+                if(totalSentiments[key] > mostPositive) {
+                    mostPositive = totalSentiments[key];
+                    bestSentiment = key;
+                }
+            });
+            document.getElementById('dash-overall-sentiment').textContent = bestSentiment;
+
+            // 3. Find area needing most improvement (highest bad/not satisfied combined)
+            let worstQ = "Need Data";
+            let worstScore = -1;
+            allSentimentQuestions.forEach(q => {
+                let negativeScore = questionScores[q.id]['Bad'] + questionScores[q.id]['Not Satisfied'];
+                if(negativeScore > worstScore && negativeScore > 0) {
+                    worstScore = negativeScore;
+                    worstQ = q.label.split(':')[0]; // Get the short label prefix
+                }
+            });
+            
+            if(worstScore > 0) {
+                document.getElementById('dash-needs-improvement').textContent = worstQ;
+            } else if (feedbackRecords.length > 0) {
+                document.getElementById('dash-needs-improvement').textContent = "None! All Good.";
+            }
+
+            // 4. Render individual charts for each feature
+            allSentimentQuestions.forEach(q => {
+                // Skip rendering chart if there's absolutely no data for this specific conditional question
+                const totalAnswersForQ = Object.values(questionScores[q.id]).reduce((a, b) => a + b, 0);
+                if (totalAnswersForQ === 0) return;
+
+                let card = document.createElement('div');
+                card.className = "bg-white p-6 rounded-xl shadow-sm border border-gray-200";
+                
+                let title = document.createElement('h3');
+                title.className = "text-md font-bold text-gray-800 mb-4";
+                title.textContent = q.label.split(':')[0]; // Use short title
+                card.appendChild(title);
+
+                let canvasWrapper = document.createElement('div');
+                canvasWrapper.style.position = "relative";
+                canvasWrapper.style.height = "250px";
+                
+                let canvas = document.createElement('canvas');
+                canvas.id = 'chart-' + q.id;
+                canvasWrapper.appendChild(canvas);
+                card.appendChild(canvasWrapper);
+                
+                container.appendChild(card);
+
+                // Chart Data Array corresponding to ['Bad', 'Not Satisfied', 'Could be better', 'Satisfied', 'Good']
+                const dataArray = [
+                    questionScores[q.id]['Bad'],
+                    questionScores[q.id]['Not Satisfied'],
+                    questionScores[q.id]['Could be better'],
+                    questionScores[q.id]['Satisfied'],
+                    questionScores[q.id]['Good']
+                ];
+
+                const ctx = canvas.getContext('2d');
+                chartsInstance[q.id] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Bad', 'Not Satisfied', 'Could be better', 'Satisfied', 'Good'],
+                        datasets: [{
+                            label: 'Number of Responses',
+                            data: dataArray,
+                            backgroundColor: [
+                                sentimentColors['Bad'],
+                                sentimentColors['Not Satisfied'],
+                                sentimentColors['Could be better'],
+                                sentimentColors['Satisfied'],
+                                sentimentColors['Good']
+                            ],
+                            borderWidth: 0,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    title: (ctx) => ctx[0].label,
+                                    label: (ctx) => ` Responses: ${ctx.raw}`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true, 
+                                ticks: { stepSize: 1 } 
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        function updateDashboardData() {
+            const dashboardView = document.getElementById('view-dashboard');
+            // If the dashboard is currently visible, refresh the charts live
+            if (!dashboardView.classList.contains('hidden')) {
+                initOrUpdateCharts(); 
+            }
+        }
+
+        function exportAllData() {
+            if (feedbackRecords.length === 0) {
+                alert("No feedback records to export yet.");
+                return;
+            }
+
+            // Map records to include original data and replace column IDs with actual question text
+            const exportData = feedbackRecords.map(record => {
+                let row = { ...record };
+                
+                // Remove internal duplicate keys used by the dashboard to keep CSV clean
+                delete row.student_id;
+                delete row.student_name;
+                delete row.student_email;
+                delete row.student_mobile;
+                delete row.student_grade;
+                delete row.student_age;
+                delete row.student_website;
+                
+                // Format the Timestamp
+                row["Interview Timestamp"] = row.timestamp; 
+                delete row.timestamp;
+                
+                // Map Feature Ratings (Common)
+                row["Feature Rating: Smoothness of platform"] = row.f_smoothness; delete row.f_smoothness;
+                row["Feature Rating: Engagement of videos"] = row.f_video; delete row.f_video;
+                row["Feature Rating: Pitch Data Gathering"] = row.f_pitch; delete row.f_pitch;
+                
+                // Map Feature Ratings & PMF (Has Website)
+                row["Feature Rating (Has Web): Love for website built"] = row.f_website; delete row.f_website;
+                row["Feature Rating (Has Web): Founder Profile page"] = row.f_founder; delete row.f_founder;
+                row["PMF (Has Web): Have you shared your startup website with friends?"] = row.q_shared_friends; delete row.q_shared_friends;
+                
+                // Map Feature Ratings & PMF (No Website)
+                row["Feature Rating (No Web): Platform Clarity"] = row.f_clarity; delete row.f_clarity;
+                row["Feature Rating (No Web): Excitement to launch"] = row.f_excitement; delete row.f_excitement;
+                row["PMF (No Web): Who do you plan to share your startup idea with?"] = row.q_share_plan; delete row.q_share_plan;
+                
+                // Map MOM Questions
+                row["MOM: When was the last time you logged into BriSharks?"] = row.q_last_login; delete row.q_last_login;
+                row["MOM: When did your business idea first 'click'?"] = row.q_aha_moment; delete row.q_aha_moment;
+                row["MOM: At which chapter did you start analyzing your idea?"] = row.q_analysis_stage; delete row.q_analysis_stage;
+                
+                // Map PMF Questions
+                row["PMF: Did you feel a sense of comfort that BriSharks was exactly what you needed?"] = row.q_comfort_fit; delete row.q_comfort_fit;
+                row["PMF: Did you ever get stuck and wish you had a mentor?"] = row.q_mentor_need; delete row.q_mentor_need;
+                row["PMF: Have you shared your startup website with your friends? Reaction?"] = row.q_shared_friends; delete row.q_shared_friends;
+                row["PMF: Successfully helped launch a real startup?"] = row.q_success_feeling; delete row.q_success_feeling;
+                
+                // Map Growth/NPS Questions
+                row["NPS: Score (0-10)"] = row.q_nps_score; delete row.q_nps_score;
+                row["Growth: How would you describe BriSharks to a friend?"] = row.q_describe_friend; delete row.q_describe_friend;
+                row["Growth: What new features or tools do you need?"] = row.q_new_features; delete row.q_new_features;
+
+                // Map Journey Questions
+                row["Journey: Current Status"] = row.q_journey_status; delete row.q_journey_status;
+                row["Journey: Most rewarding part of completion?"] = row.q_completed_reward; delete row.q_completed_reward;
+                row["Journey: Where exactly did you get stuck?"] = row.q_stuck_reason; delete row.q_stuck_reason;
+
+                // Map Follow-up
+                row["Follow-up: Notes"] = row.q_followup_notes; delete row.q_followup_notes;
+                row["Follow-up: Scheduled Time"] = row.q_followup_time; delete row.q_followup_time;
+                delete row.reminder_sent;
+
+                return row;
+            });
+
+            // Convert to CSV using PapaParse
+            const csv = Papa.unparse(exportData);
+            
+            // Trigger download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `BriSharks_Feedback_Export_${new Date().getTime()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Utility functions
+        function enableSection(id) {
+            const el = document.getElementById(id);
+            el.style.opacity = '1';
+            el.style.pointerEvents = 'auto';
+        }
+        function disableSection(id) {
+            const el = document.getElementById(id);
+            el.style.opacity = '0.5';
+            el.style.pointerEvents = 'none';
+        }
+
+        // Email Reminder System
+        function checkReminders() {
+            const now = new Date().getTime();
+            let stateChanged = false;
+
+            feedbackRecords.forEach(record => {
+                if (record.q_followup_time && !record.reminder_sent) {
+                    const scheduledTime = new Date(record.q_followup_time).getTime();
+                    // If the scheduled time has arrived or passed
+                    if (scheduledTime && scheduledTime <= now) {
+                        sendEmailReminder(record);
+                        record.reminder_sent = true; // Mark as sent so it doesn't trigger again
+                        stateChanged = true;
+                    }
+                }
+            });
+
+            // Update LocalStorage and UI if a reminder was processed
+            if (stateChanged) {
+                localStorage.setItem('brisharks_feedbacks', JSON.stringify(feedbackRecords));
+                if (studentsData.length > 0) populateStudentDropdown(); // Refresh colors
+            }
+        }
+
+        function sendEmailReminder(record) {
+            const subject = encodeURIComponent(`Reminder: Scheduled Call with ${record.student_name}`);
+            const body = encodeURIComponent(`You have a scheduled follow-up call with student: ${record.student_name}\nStudent ID: ${record.student_id}\n\nNotes/Reason: ${record.q_followup_notes || 'No specific notes provided.'}\n\nPlease follow up as requested.`);
+            
+            // Automatically opens the default email client to draft the email
+            window.location.href = `mailto:yash@bribooks.com?subject=${subject}&body=${body}`;
+        }
+        
+        // Draft Autosave Functions
+        let draftTimer;
+        function scheduleDraftSave() {
+            clearTimeout(draftTimer);
+            document.getElementById('draft-indicator').classList.add('hidden');
+            // Save automatically 1 second after they stop typing
+            draftTimer = setTimeout(saveFormDraft, 1000); 
+        }
+
+        function saveFormDraft() {
+            if (!currentStudent) return;
+            const studentId = currentStudent.id || currentStudent.ID;
+            
+            let draft = {
+                q_last_login: document.getElementById('q_last_login').value,
+                q_aha_moment: document.getElementById('q_aha_moment').value,
+                q_analysis_stage: document.getElementById('q_analysis_stage').value,
+                q_comfort_fit: document.getElementById('q_comfort_fit').value,
+                q_mentor_need: document.getElementById('q_mentor_need').value,
+                q_shared_friends: document.getElementById('q_shared_friends').value,
+                q_share_plan: document.getElementById('q_share_plan').value,
+                q_success_feeling: document.getElementById('q_success_feeling').value,
+                q_describe_friend: document.getElementById('q_describe_friend').value,
+                q_new_features: document.getElementById('q_new_features').value,
+                q_journey_status: document.getElementById('q_journey_status').value,
+                q_completed_reward: document.getElementById('q_completed_reward').value,
+                q_stuck_reason: document.getElementById('q_stuck_reason').value,
+                q_followup_notes: document.getElementById('q_followup_notes').value,
+                q_followup_time: document.getElementById('q_followup_time').value,
+            };
+
+            const npsSelected = document.querySelector('input[name="q_nps_score"]:checked');
+            if (npsSelected) draft.q_nps_score = npsSelected.value;
+
+            allSentimentQuestions.forEach(q => {
+                const selected = document.querySelector(`input[name="${q.id}"]:checked`);
+                if (selected) draft[q.id] = selected.value;
+            });
+
+            localStorage.setItem(`brisharks_draft_${studentId}`, JSON.stringify(draft));
+            
+            const indicator = document.getElementById('draft-indicator');
+            indicator.textContent = "✓ Draft Autosaved";
+            indicator.classList.remove('hidden');
+        }
+
+        // Start checking for reminders every 10 seconds
+        setInterval(checkReminders, 10000); 
+
+        // Boot
+        window.onload = initUI;
+    </script>
+</body>
+</html>
