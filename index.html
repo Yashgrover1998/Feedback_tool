@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BriSharks Student Feedback Framework</title>
+    
+    <!-- External Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -32,6 +34,16 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
+
+    <!-- Google Tag Setup -->
+    <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" crossorigin="anonymous"></script>
+    <script>
+      window.googletag = window.googletag || {cmd: []};
+      googletag.cmd.push(function() {
+        googletag.defineSlot('/23361982758/reward_ad_2', [1024, 768], 'div-gpt-ad-1784003927636-0').addService(googletag.pubads());
+        googletag.enableServices();
+      });
+    </script>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans text-gray-800">
 
@@ -55,343 +67,368 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-4 md:p-6">
-        <div id="view-interview" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            <!-- Left Sidebar -->
-            <div class="lg:col-span-4 space-y-6">
-                <!-- Step 1: Upload -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <span class="bg-brishark-100 text-brishark-800 w-6 h-6 rounded-full flex items-center justify-center text-sm">1</span> 
-                        Upload Student Data
-                    </h2>
-                    <label class="block w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition">
-                        <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                        <span class="text-sm text-gray-600 font-medium">Click to upload CSV</span>
-                        <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSVUpload(event)">
-                    </label>
-                    <div id="upload-status" class="text-xs text-green-600 mt-3 font-medium hidden flex justify-between">
-                        <span>✓ Data Ready</span>
-                        <button onclick="clearAllData()" class="text-red-500 hover:underline">Clear Local Data</button>
+    <main class="max-w-7xl mx-auto p-4 md:p-6 flex flex-col min-h-screen">
+        
+        <!-- App Content Area -->
+        <div class="flex-grow mb-12">
+            <div id="view-interview" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Sidebar -->
+                <div class="lg:col-span-4 space-y-6">
+                    <!-- Step 1: Upload -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <span class="bg-brishark-100 text-brishark-800 w-6 h-6 rounded-full flex items-center justify-center text-sm">1</span> 
+                            Upload Student Data
+                        </h2>
+                        <label class="block w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition">
+                            <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            <span class="text-sm text-gray-600 font-medium">Click to upload CSV</span>
+                            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSVUpload(event)">
+                        </label>
+                        <div id="upload-status" class="text-xs text-green-600 mt-3 font-medium hidden flex justify-between">
+                            <span>✓ Data Ready</span>
+                            <button onclick="clearAllData()" class="text-red-500 hover:underline">Clear Local Data</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Select -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 transition-opacity duration-300" id="student-selector-card" style="opacity: 0.5; pointer-events: none;">
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <span class="bg-brishark-100 text-brishark-800 w-6 h-6 rounded-full flex items-center justify-center text-sm">2</span> 
+                            Select Student
+                        </h2>
+                        <select id="student-dropdown" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 focus:ring-brishark-500 focus:border-brishark-500 font-medium" onchange="loadStudentData()">
+                            <option value="">-- Waiting for CSV Upload --</option>
+                        </select>
+
+                        <div id="student-info" class="mt-5 hidden">
+                            <h3 class="text-sm font-bold text-brishark-800 border-b pb-2 mb-3">Interviewee Details</h3>
+                            <div class="grid grid-cols-2 gap-4 text-sm bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                                <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Name</span><br><span id="info-name" class="font-bold text-gray-800"></span></div>
+                                <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">ID</span><br><span id="info-id" class="font-medium text-gray-700"></span></div>
+                                <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Email</span><br><span id="info-email" class="font-medium text-gray-700 truncate block"></span></div>
+                                <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Mobile</span><br><span id="info-mobile" class="font-medium text-gray-700"></span></div>
+                                <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Grade & Age</span><br><span id="info-grade-age" class="font-medium text-gray-700"></span></div>
+                                <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Location</span><br><span id="info-location" class="font-medium text-gray-700 truncate block"></span></div>
+                                <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Website</span><br><span id="info-website" class="font-medium text-gray-500 break-all block"></span></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Step 2: Select -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 transition-opacity duration-300" id="student-selector-card" style="opacity: 0.5; pointer-events: none;">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <span class="bg-brishark-100 text-brishark-800 w-6 h-6 rounded-full flex items-center justify-center text-sm">2</span> 
-                        Select Student
-                    </h2>
-                    <select id="student-dropdown" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 focus:ring-brishark-500 focus:border-brishark-500 font-medium" onchange="loadStudentData()">
-                        <option value="">-- Waiting for CSV Upload --</option>
-                    </select>
-
-                    <div id="student-info" class="mt-5 hidden">
-                        <h3 class="text-sm font-bold text-brishark-800 border-b pb-2 mb-3">Interviewee Details</h3>
-                        <div class="grid grid-cols-2 gap-4 text-sm bg-blue-50/50 p-4 rounded-lg border border-blue-100">
-                            <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Name</span><br><span id="info-name" class="font-bold text-gray-800"></span></div>
-                            <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">ID</span><br><span id="info-id" class="font-medium text-gray-700"></span></div>
-                            <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Email</span><br><span id="info-email" class="font-medium text-gray-700 truncate block"></span></div>
-                            <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Mobile</span><br><span id="info-mobile" class="font-medium text-gray-700"></span></div>
-                            <div><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Grade & Age</span><br><span id="info-grade-age" class="font-medium text-gray-700"></span></div>
-                            <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Location</span><br><span id="info-location" class="font-medium text-gray-700 truncate block"></span></div>
-                            <div class="col-span-2"><span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Website</span><br><span id="info-website" class="font-medium text-gray-500 break-all block"></span></div>
+                <!-- Right Side: Interview Form -->
+                <div class="lg:col-span-8">
+                    <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 transition-opacity duration-300" id="interview-form-card" style="opacity: 0.5; pointer-events: none;">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 border-b pb-4 gap-2">
+                            <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                <span class="bg-brishark-100 text-brishark-800 w-8 h-8 rounded-full flex items-center justify-center text-lg">3</span> 
+                                Interview Form
+                                <span id="draft-indicator" class="hidden text-xs font-bold px-2 py-1 bg-green-100 text-green-700 rounded-full ml-2"></span>
+                            </h2>
+                            <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">Interviewing: <span id="current-interviewee" class="font-bold text-brishark-700">None selected</span></span>
                         </div>
+
+                        <form id="feedbackForm" onsubmit="saveFeedback(event)">
+                            
+                            <!-- Section 1: Feature Ratings -->
+                            <div class="mb-8">
+                                <div class="bg-brishark-50 border-l-4 border-brishark-500 p-4 mb-6 rounded-r-lg">
+                                    <h3 class="text-lg font-bold text-brishark-900">1. Feature Ratings (Sentiment Analysis)</h3>
+                                    <p class="text-sm text-gray-600">Select the sentiment category for specific parts of the platform.</p>
+                                </div>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-white p-4 border rounded-lg shadow-sm">
+                                        <label class="block font-semibold text-gray-800 mb-3">Smoothness: "How smooth and easy is it to use the BriSharks platform?"</label>
+                                        <div class="flex flex-wrap gap-2" id="rad_f_smoothness"></div>
+                                    </div>
+                                    <div class="bg-white p-4 border rounded-lg shadow-sm">
+                                        <label class="block font-semibold text-gray-800 mb-3">Engagement of Video: "How fun and interesting are the lesson videos?"</label>
+                                        <div class="flex flex-wrap gap-2" id="rad_f_video"></div>
+                                    </div>
+                                    
+                                    <!-- Conditional: Has Website -->
+                                    <div id="cond_website_yes" class="space-y-4 hidden">
+                                        <div class="bg-blue-50/50 p-4 border border-blue-200 rounded-lg shadow-sm">
+                                            <div class="text-xs text-blue-500 font-bold mb-1 uppercase tracking-wider">Has Website</div>
+                                            <label class="block font-semibold text-gray-800 mb-3">Rate your Website: "How much do you love the startup website you built?"</label>
+                                            <div class="flex flex-wrap gap-2" id="rad_f_website"></div>
+                                        </div>
+                                        <div class="bg-blue-50/50 p-4 border border-blue-200 rounded-lg shadow-sm">
+                                            <label class="block font-semibold text-gray-800 mb-3">Rate your Founder Page: "How cool is your Founder Profile page?"</label>
+                                            <div class="flex flex-wrap gap-2" id="rad_f_founder"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Conditional: No Website -->
+                                    <div id="cond_website_no" class="space-y-4 hidden">
+                                        <div class="bg-yellow-50/50 p-4 border border-yellow-200 rounded-lg shadow-sm">
+                                            <div class="text-xs text-yellow-600 font-bold mb-1 uppercase tracking-wider">No Website Yet</div>
+                                            <label class="block font-semibold text-gray-800 mb-3">Clarity: "How clear are the steps to build your future website?"</label>
+                                            <div class="flex flex-wrap gap-2" id="rad_f_clarity"></div>
+                                        </div>
+                                        <div class="bg-yellow-50/50 p-4 border border-yellow-200 rounded-lg shadow-sm">
+                                            <label class="block font-semibold text-gray-800 mb-3">Idea Excitement: "How excited are you to eventually create your Founder Profile?"</label>
+                                            <div class="flex flex-wrap gap-2" id="rad_f_excitement"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-white p-4 border rounded-lg shadow-sm">
+                                        <label class="block font-semibold text-gray-800 mb-3">Pitch Data Gathering: "How easy was it to gather data and build your Pitch?"</label>
+                                        <div class="flex flex-wrap gap-2" id="rad_f_pitch"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 2: MOM Questions -->
+                            <div class="mb-8">
+                                <div class="bg-purple-50 border-l-4 border-purple-500 p-4 mb-6 rounded-r-lg">
+                                    <h3 class="text-lg font-bold text-purple-900">2. Platform Usage & The "Aha!" Moment (MOM)</h3>
+                                    <p class="text-sm text-gray-600">Understand the student's timeline and value realization.</p>
+                                </div>
+                                
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">When was the last time you logged into BriSharks?</label>
+                                        <input type="text" id="q_last_login" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="e.g., Yesterday, last week...">
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">When did your business idea first 'click' in your mind? Was it before you joined, or while working on the platform?</label>
+                                        <textarea id="q_aha_moment" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="Student's answer..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">At which chapter or stage did you start analyzing your idea to see if it would actually work in the real world?</label>
+                                        <input type="text" id="q_analysis_stage" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="e.g., Chapter 3, Market Research...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 3: PMF & Emotion -->
+                            <div class="mb-8">
+                                <div class="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 rounded-r-lg">
+                                    <h3 class="text-lg font-bold text-orange-900">3. Product-Market Fit & Emotion (PMF)</h3>
+                                </div>
+                                
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">While building your idea, did you feel a sense of comfort that BriSharks was the exact platform you needed? Why?</label>
+                                        <textarea id="q_comfort_fit" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">Did you ever get stuck on a lesson and wish you had a real person to help? If yes, where did you get stuck?</label>
+                                        <textarea id="q_mentor_need" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500"></textarea>
+                                    </div>
+                                    
+                                    <!-- Conditional Sharing -->
+                                    <div id="cond_share_yes" class="hidden">
+                                        <label class="block font-medium text-gray-700 mb-1">Have you shared your startup website with your friends? What was their reaction?</label>
+                                        <textarea id="q_shared_friends" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500"></textarea>
+                                    </div>
+                                    <div id="cond_share_no" class="hidden">
+                                        <label class="block font-medium text-gray-700 mb-1">Who do you plan to share your idea with once it's ready, and what reaction do you hope for?</label>
+                                        <textarea id="q_share_plan" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500"></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">Do you feel that this platform successfully helped you launch a real startup?</label>
+                                        <select id="q_success_feeling" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500">
+                                            <option value="">Select...</option>
+                                            <option value="Yes, absolutely">Yes, absolutely</option>
+                                            <option value="Yes, somewhat">Yes, somewhat</option>
+                                            <option value="Not really">Not really</option>
+                                            <option value="No">No</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 4: Journey & Roadblocks -->
+                            <div class="mb-8">
+                                <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-r-lg">
+                                    <h3 class="text-lg font-bold text-indigo-900">4. Journey Status & Roadblocks</h3>
+                                </div>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">Current Journey Status</label>
+                                        <select id="q_journey_status" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500" onchange="toggleJourneyFields()">
+                                            <option value="">Select Status...</option>
+                                            <option value="Completed">Completed successfully</option>
+                                            <option value="In Progress">In Progress (Active)</option>
+                                            <option value="Stuck">Stuck / Needs Help</option>
+                                            <option value="Dropped Out">Dropped Out</option>
+                                        </select>
+                                    </div>
+                                    <div id="wrap_completed" class="hidden bg-indigo-50/50 p-4 border border-indigo-100 rounded-lg">
+                                        <label class="block font-medium text-indigo-900 mb-1">What was the most rewarding part of completing your startup?</label>
+                                        <textarea id="q_completed_reward" rows="2" class="w-full border border-indigo-300 rounded-lg p-3"></textarea>
+                                    </div>
+                                    <div id="wrap_stuck" class="hidden bg-red-50 p-4 border border-red-200 rounded-lg">
+                                        <label class="block font-medium text-red-900 mb-1">Exactly where are you stuck, and what is confusing you?</label>
+                                        <textarea id="q_stuck_reason" rows="2" class="w-full border border-red-300 rounded-lg p-3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 5: Growth & Referrals -->
+                            <div class="mb-8">
+                                <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-lg">
+                                    <h3 class="text-lg font-bold text-green-900">5. Growth & Referrals</h3>
+                                </div>
+                                
+                                <div class="space-y-6">
+                                    <div class="bg-gray-50 p-5 border border-gray-200 rounded-lg">
+                                        <label class="block font-bold text-gray-800 mb-3">NPS Score: On a scale of 0-10, how likely are you to recommend BriSharks to a friend?</label>
+                                        <div class="flex flex-wrap gap-2" id="nps_container">
+                                            <!-- Injected by JS -->
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">How would you describe BriSharks to a friend? What is BriSharks to you?</label>
+                                        <textarea id="q_describe_friend" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-green-500 focus:border-green-500"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">What new features or tools do you need to make BriSharks even more helpful for you?</label>
+                                        <textarea id="q_new_features" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-green-500 focus:border-green-500"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 6: Follow Up -->
+                            <div class="mb-8">
+                                <div class="bg-gray-100 border-l-4 border-gray-600 p-4 mb-6 rounded-r-lg">
+                                    <h3 class="text-lg font-bold text-gray-900">6. Follow-up & Reminders</h3>
+                                    <p class="text-sm text-gray-600">Schedule optional callbacks. Will auto-draft an email to yash@bribooks.com at the scheduled time.</p>
+                                </div>
+                                <div class="space-y-4 bg-white p-5 border border-gray-200 rounded-lg shadow-sm">
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">Follow-up Notes / Reason <span class="text-gray-400 font-normal">(Optional)</span></label>
+                                        <input type="text" id="q_followup_notes" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-gray-500 focus:border-gray-500" placeholder="e.g., Call back to discuss new feature...">
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium text-gray-700 mb-1">Schedule Call Time <span class="text-gray-400 font-normal">(Optional)</span></label>
+                                        <input type="datetime-local" id="q_followup_time" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-gray-500 focus:border-gray-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t flex justify-end">
+                                <button type="submit" class="bg-brishark-600 hover:bg-brishark-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-transform transform hover:-translate-y-0.5">
+                                    Save Feedback Entry
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Side: Interview Form -->
-            <div class="lg:col-span-8">
-                <div class="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 transition-opacity duration-300" id="interview-form-card" style="opacity: 0.5; pointer-events: none;">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 border-b pb-4 gap-2">
-                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                            <span class="bg-brishark-100 text-brishark-800 w-8 h-8 rounded-full flex items-center justify-center text-lg">3</span> 
-                            Interview Form
-                            <span id="draft-indicator" class="hidden text-xs font-bold px-2 py-1 bg-green-100 text-green-700 rounded-full ml-2"></span>
-                        </h2>
-                        <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">Interviewing: <span id="current-interviewee" class="font-bold text-brishark-700">None selected</span></span>
+            <!-- Analytics Dashboard View -->
+            <div id="view-analytics" class="hidden space-y-6">
+                <!-- Top Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center items-center">
+                        <h3 class="text-gray-500 font-bold uppercase tracking-wider text-[10px] mb-1 text-center">Total Feedbacks</h3>
+                        <div class="text-3xl font-black text-brishark-600" id="dash-total">0</div>
                     </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center items-center">
+                        <h3 class="text-gray-500 font-bold uppercase tracking-wider text-[10px] mb-1 text-center">Overall NPS</h3>
+                        <div class="text-3xl font-black text-green-500 flex items-baseline gap-1" id="dash-nps">N/A</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center items-center">
+                        <h3 class="text-gray-500 font-bold uppercase tracking-wider text-[10px] mb-1 text-center">Graduation Rate</h3>
+                        <div class="text-3xl font-black text-indigo-500" id="dash-completion">0%</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center items-center">
+                        <h3 class="text-gray-500 font-bold uppercase tracking-wider text-[10px] mb-1 text-center">Felt Successful</h3>
+                        <div class="text-3xl font-black text-orange-500" id="dash-success">0%</div>
+                    </div>
+                </div>
 
-                    <form id="feedbackForm" onsubmit="saveFeedback(event)">
-                        
-                        <!-- Section 1: Feature Ratings -->
-                        <div class="mb-8">
-                            <div class="bg-brishark-50 border-l-4 border-brishark-500 p-4 mb-6 rounded-r-lg">
-                                <h3 class="text-lg font-bold text-brishark-900">1. Feature Ratings (Sentiment Analysis)</h3>
-                                <p class="text-sm text-gray-600">Select the sentiment category for specific parts of the platform.</p>
-                            </div>
-                            
-                            <div class="space-y-4">
-                                <div class="bg-white p-4 border rounded-lg shadow-sm">
-                                    <label class="block font-semibold text-gray-800 mb-3">Smoothness: "How smooth and easy is it to use the BriSharks platform?"</label>
-                                    <div class="flex flex-wrap gap-2" id="rad_f_smoothness"></div>
-                                </div>
-                                <div class="bg-white p-4 border rounded-lg shadow-sm">
-                                    <label class="block font-semibold text-gray-800 mb-3">Engagement of Video: "How fun and interesting are the lesson videos?"</label>
-                                    <div class="flex flex-wrap gap-2" id="rad_f_video"></div>
-                                </div>
-                                
-                                <!-- Conditional: Has Website -->
-                                <div id="cond_website_yes" class="space-y-4 hidden">
-                                    <div class="bg-blue-50/50 p-4 border border-blue-200 rounded-lg shadow-sm">
-                                        <div class="text-xs text-blue-500 font-bold mb-1 uppercase tracking-wider">Has Website</div>
-                                        <label class="block font-semibold text-gray-800 mb-3">Rate your Website: "How much do you love the startup website you built?"</label>
-                                        <div class="flex flex-wrap gap-2" id="rad_f_website"></div>
-                                    </div>
-                                    <div class="bg-blue-50/50 p-4 border border-blue-200 rounded-lg shadow-sm">
-                                        <label class="block font-semibold text-gray-800 mb-3">Rate your Founder Page: "How cool is your Founder Profile page?"</label>
-                                        <div class="flex flex-wrap gap-2" id="rad_f_founder"></div>
-                                    </div>
-                                </div>
-
-                                <!-- Conditional: No Website -->
-                                <div id="cond_website_no" class="space-y-4 hidden">
-                                    <div class="bg-yellow-50/50 p-4 border border-yellow-200 rounded-lg shadow-sm">
-                                        <div class="text-xs text-yellow-600 font-bold mb-1 uppercase tracking-wider">No Website Yet</div>
-                                        <label class="block font-semibold text-gray-800 mb-3">Clarity: "How clear are the steps to build your future website?"</label>
-                                        <div class="flex flex-wrap gap-2" id="rad_f_clarity"></div>
-                                    </div>
-                                    <div class="bg-yellow-50/50 p-4 border border-yellow-200 rounded-lg shadow-sm">
-                                        <label class="block font-semibold text-gray-800 mb-3">Idea Excitement: "How excited are you to eventually create your Founder Profile?"</label>
-                                        <div class="flex flex-wrap gap-2" id="rad_f_excitement"></div>
-                                    </div>
-                                </div>
-
-                                <div class="bg-white p-4 border rounded-lg shadow-sm">
-                                    <label class="block font-semibold text-gray-800 mb-3">Pitch Data Gathering: "How easy was it to gather data and build your Pitch?"</label>
-                                    <div class="flex flex-wrap gap-2" id="rad_f_pitch"></div>
-                                </div>
-                            </div>
+                <!-- Charts Row 1 -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Sentiment Stacked Bar -->
+                    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">Feature Sentiment Breakdown</h3>
+                        <div class="relative h-[300px]">
+                            <canvas id="chart-features"></canvas>
                         </div>
-
-                        <!-- Section 2: MOM Questions -->
-                        <div class="mb-8">
-                            <div class="bg-purple-50 border-l-4 border-purple-500 p-4 mb-6 rounded-r-lg">
-                                <h3 class="text-lg font-bold text-purple-900">2. Platform Usage & The "Aha!" Moment (MOM)</h3>
-                                <p class="text-sm text-gray-600">Understand the student's timeline and value realization.</p>
-                            </div>
-                            
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">When was the last time you logged into BriSharks?</label>
-                                    <input type="text" id="q_last_login" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="e.g., Yesterday, last week...">
-                                </div>
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">When did your business idea first 'click' in your mind? Was it before you joined, or while working on the platform?</label>
-                                    <textarea id="q_aha_moment" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="Student's answer..."></textarea>
-                                </div>
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">At which chapter or stage did you start analyzing your idea to see if it would actually work in the real world?</label>
-                                    <input type="text" id="q_analysis_stage" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="e.g., Chapter 3, Market Research...">
-                                </div>
-                            </div>
+                    </div>
+                    <!-- NPS Doughnut -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">NPS Breakdown</h3>
+                        <div class="relative h-[300px]">
+                            <canvas id="chart-nps"></canvas>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Section 3: PMF & Emotion -->
-                        <div class="mb-8">
-                            <div class="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6 rounded-r-lg">
-                                <h3 class="text-lg font-bold text-orange-900">3. Product-Market Fit & Emotion (PMF)</h3>
-                            </div>
-                            
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">While building your idea, did you feel a sense of comfort that BriSharks was the exact platform you needed? Why?</label>
-                                    <textarea id="q_comfort_fit" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">Did you ever get stuck on a lesson and wish you had a real person to help? If yes, where did you get stuck?</label>
-                                    <textarea id="q_mentor_need" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500"></textarea>
-                                </div>
-                                
-                                <!-- Conditional Sharing -->
-                                <div id="cond_share_yes" class="hidden">
-                                    <label class="block font-medium text-gray-700 mb-1">Have you shared your startup website with your friends? What was their reaction?</label>
-                                    <textarea id="q_shared_friends" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500"></textarea>
-                                </div>
-                                <div id="cond_share_no" class="hidden">
-                                    <label class="block font-medium text-gray-700 mb-1">Who do you plan to share your idea with once it's ready, and what reaction do you hope for?</label>
-                                    <textarea id="q_share_plan" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500"></textarea>
-                                </div>
-
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">Do you feel that this platform successfully helped you launch a real startup?</label>
-                                    <select id="q_success_feeling" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-orange-500 focus:border-orange-500">
-                                        <option value="">Select...</option>
-                                        <option value="Yes, absolutely">Yes, absolutely</option>
-                                        <option value="Yes, somewhat">Yes, somewhat</option>
-                                        <option value="Not really">Not really</option>
-                                        <option value="No">No</option>
-                                    </select>
-                                </div>
-                            </div>
+                <!-- Charts Row 2 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Journey Status -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">Journey Status</h3>
+                        <div class="relative h-[250px]">
+                            <canvas id="chart-journey"></canvas>
                         </div>
-
-                        <!-- Section 4: Journey & Roadblocks -->
-                        <div class="mb-8">
-                            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-r-lg">
-                                <h3 class="text-lg font-bold text-indigo-900">4. Journey Status & Roadblocks</h3>
-                            </div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">Current Journey Status</label>
-                                    <select id="q_journey_status" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-indigo-500 focus:border-indigo-500" onchange="toggleJourneyFields()">
-                                        <option value="">Select Status...</option>
-                                        <option value="Completed">Completed successfully</option>
-                                        <option value="In Progress">In Progress (Active)</option>
-                                        <option value="Stuck">Stuck / Needs Help</option>
-                                        <option value="Dropped Out">Dropped Out</option>
-                                    </select>
-                                </div>
-                                <div id="wrap_completed" class="hidden bg-indigo-50/50 p-4 border border-indigo-100 rounded-lg">
-                                    <label class="block font-medium text-indigo-900 mb-1">What was the most rewarding part of completing your startup?</label>
-                                    <textarea id="q_completed_reward" rows="2" class="w-full border border-indigo-300 rounded-lg p-3"></textarea>
-                                </div>
-                                <div id="wrap_stuck" class="hidden bg-red-50 p-4 border border-red-200 rounded-lg">
-                                    <label class="block font-medium text-red-900 mb-1">Exactly where are you stuck, and what is confusing you?</label>
-                                    <textarea id="q_stuck_reason" rows="2" class="w-full border border-red-300 rounded-lg p-3"></textarea>
-                                </div>
-                            </div>
+                    </div>
+                    <!-- PMF Success -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">Felt It Helped Launch Startup?</h3>
+                        <div class="relative h-[250px]">
+                            <canvas id="chart-success"></canvas>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Section 5: Growth & Referrals -->
-                        <div class="mb-8">
-                            <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-r-lg">
-                                <h3 class="text-lg font-bold text-green-900">5. Growth & Referrals</h3>
-                            </div>
-                            
-                            <div class="space-y-6">
-                                <div class="bg-gray-50 p-5 border border-gray-200 rounded-lg">
-                                    <label class="block font-bold text-gray-800 mb-3">NPS Score: On a scale of 0-10, how likely are you to recommend BriSharks to a friend?</label>
-                                    <div class="flex flex-wrap gap-2" id="nps_container">
-                                        <!-- Injected by JS -->
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">How would you describe BriSharks to a friend? What is BriSharks to you?</label>
-                                    <textarea id="q_describe_friend" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-green-500 focus:border-green-500"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">What new features or tools do you need to make BriSharks even more helpful for you?</label>
-                                    <textarea id="q_new_features" rows="2" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-green-500 focus:border-green-500"></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Section 6: Follow Up -->
-                        <div class="mb-8">
-                            <div class="bg-gray-100 border-l-4 border-gray-600 p-4 mb-6 rounded-r-lg">
-                                <h3 class="text-lg font-bold text-gray-900">6. Follow-up & Reminders</h3>
-                                <p class="text-sm text-gray-600">Schedule optional callbacks. Will auto-draft an email to yash@bribooks.com at the scheduled time.</p>
-                            </div>
-                            <div class="space-y-4 bg-white p-5 border border-gray-200 rounded-lg shadow-sm">
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">Follow-up Notes / Reason <span class="text-gray-400 font-normal">(Optional)</span></label>
-                                    <input type="text" id="q_followup_notes" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-gray-500 focus:border-gray-500" placeholder="e.g., Call back to discuss new feature...">
-                                </div>
-                                <div>
-                                    <label class="block font-medium text-gray-700 mb-1">Schedule Call Time <span class="text-gray-400 font-normal">(Optional)</span></label>
-                                    <input type="datetime-local" id="q_followup_time" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-gray-500 focus:border-gray-500">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pt-4 border-t flex justify-end">
-                            <button type="submit" class="bg-brishark-600 hover:bg-brishark-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-transform transform hover:-translate-y-0.5">
-                                Save Feedback Entry
-                            </button>
-                        </div>
-                    </form>
+                <!-- Qualitative Feeds Row -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Roadblocks -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px]">
+                        <h3 class="text-sm font-bold text-red-700 mb-3 flex justify-between items-center bg-red-50 p-2 rounded-lg">
+                            🚧 Roadblocks (Stuck)
+                            <span class="bg-white text-red-600 text-xs px-2 py-1 rounded-full border border-red-200" id="dash-stuck-count">0</span>
+                        </h3>
+                        <div class="flex-1 overflow-y-auto space-y-3 pr-2 text-sm" id="feed-roadblocks"></div>
+                    </div>
+                    <!-- Feature Requests -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px]">
+                        <h3 class="text-sm font-bold text-green-700 mb-3 flex justify-between items-center bg-green-50 p-2 rounded-lg">
+                            💡 Feature Requests
+                        </h3>
+                        <div class="flex-1 overflow-y-auto space-y-3 pr-2 text-sm" id="feed-features"></div>
+                    </div>
+                    <!-- Aha Moments -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px]">
+                        <h3 class="text-sm font-bold text-purple-700 mb-3 flex justify-between items-center bg-purple-50 p-2 rounded-lg">
+                            ✨ "Aha!" Moments
+                        </h3>
+                        <div class="flex-1 overflow-y-auto space-y-3 pr-2 text-sm" id="feed-aha"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Analytics Dashboard View -->
-        <div id="view-analytics" class="hidden space-y-6">
-            <!-- Top Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center items-center">
-                    <h3 class="text-gray-500 font-bold uppercase tracking-wider text-[10px] mb-1 text-center">Total Feedbacks</h3>
-                    <div class="text-3xl font-black text-brishark-600" id="dash-total">0</div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center items-center">
-                    <h3 class="text-gray-500 font-bold uppercase tracking-wider text-[10px] mb-1 text-center">Overall NPS</h3>
-                    <div class="text-3xl font-black text-green-500 flex items-baseline gap-1" id="dash-nps">N/A</div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center items-center">
-                    <h3 class="text-gray-500 font-bold uppercase tracking-wider text-[10px] mb-1 text-center">Graduation Rate</h3>
-                    <div class="text-3xl font-black text-indigo-500" id="dash-completion">0%</div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center items-center">
-                    <h3 class="text-gray-500 font-bold uppercase tracking-wider text-[10px] mb-1 text-center">Felt Successful</h3>
-                    <div class="text-3xl font-black text-orange-500" id="dash-success">0%</div>
-                </div>
-            </div>
-
-            <!-- Charts Row 1 -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Sentiment Stacked Bar -->
-                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">Feature Sentiment Breakdown</h3>
-                    <div class="relative h-[300px]">
-                        <canvas id="chart-features"></canvas>
-                    </div>
-                </div>
-                <!-- NPS Doughnut -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">NPS Breakdown</h3>
-                    <div class="relative h-[300px]">
-                        <canvas id="chart-nps"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charts Row 2 -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Journey Status -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">Journey Status</h3>
-                    <div class="relative h-[250px]">
-                        <canvas id="chart-journey"></canvas>
-                    </div>
-                </div>
-                <!-- PMF Success -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider">Felt It Helped Launch Startup?</h3>
-                    <div class="relative h-[250px]">
-                        <canvas id="chart-success"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Qualitative Feeds Row -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Roadblocks -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px]">
-                    <h3 class="text-sm font-bold text-red-700 mb-3 flex justify-between items-center bg-red-50 p-2 rounded-lg">
-                        🚧 Roadblocks (Stuck)
-                        <span class="bg-white text-red-600 text-xs px-2 py-1 rounded-full border border-red-200" id="dash-stuck-count">0</span>
-                    </h3>
-                    <div class="flex-1 overflow-y-auto space-y-3 pr-2 text-sm" id="feed-roadblocks"></div>
-                </div>
-                <!-- Feature Requests -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px]">
-                    <h3 class="text-sm font-bold text-green-700 mb-3 flex justify-between items-center bg-green-50 p-2 rounded-lg">
-                        💡 Feature Requests
-                    </h3>
-                    <div class="flex-1 overflow-y-auto space-y-3 pr-2 text-sm" id="feed-features"></div>
-                </div>
-                <!-- Aha Moments -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col h-[400px]">
-                    <h3 class="text-sm font-bold text-purple-700 mb-3 flex justify-between items-center bg-purple-50 p-2 rounded-lg">
-                        ✨ "Aha!" Moments
-                    </h3>
-                    <div class="flex-1 overflow-y-auto space-y-3 pr-2 text-sm" id="feed-aha"></div>
-                </div>
+        <!-- Ad Placement Section -->
+        <div class="mt-8 border-t border-gray-200 pt-8 w-full flex justify-center items-center overflow-x-auto bg-gray-50 rounded-xl p-4 shadow-inner">
+            <!-- /23361982758/reward_ad_2 -->
+            <div id='div-gpt-ad-1784003927636-0' style='min-width: 1024px; min-height: 768px;' class="bg-white rounded-lg shadow border border-gray-100 flex justify-center items-center text-gray-300">
+              <script>
+                googletag.cmd.push(function() { googletag.display('div-gpt-ad-1784003927636-0'); });
+              </script>
             </div>
         </div>
     </main>
+
+    <!-- Custom Modal Overlay (Replaces alerts and confirms) -->
+    <div id="custom-modal" class="fixed inset-0 bg-gray-900/50 hidden z-[100] flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all border border-gray-100">
+            <h3 id="modal-title" class="text-lg font-bold text-gray-900 mb-2">Message</h3>
+            <p id="modal-message" class="text-gray-600 mb-6 text-sm"></p>
+            <div id="modal-actions" class="flex justify-end gap-3">
+                <!-- Action buttons injected via JS -->
+            </div>
+        </div>
+    </div>
 
     <script>
         let studentsData = [];
@@ -411,6 +448,33 @@
             { val: 'Satisfied', class: 'sentiment-radio-sat' },
             { val: 'Good', class: 'sentiment-radio-good' }
         ];
+
+        // --- CUSTOM MODAL LOGIC ---
+        function showModal(title, message, type, onConfirm) {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            const actions = document.getElementById('modal-actions');
+            actions.innerHTML = '';
+
+            if (type === 'alert') {
+                actions.innerHTML = `<button onclick="closeModal()" class="bg-brishark-600 hover:bg-brishark-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition shadow-sm">Got it</button>`;
+            } else if (type === 'confirm') {
+                actions.innerHTML = `
+                    <button onclick="closeModal()" class="px-5 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition">Cancel</button>
+                    <button id="modal-confirm-btn" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg text-sm font-medium transition shadow-sm">Yes, proceed</button>
+                `;
+                document.getElementById('modal-confirm-btn').onclick = () => {
+                    closeModal();
+                    if(onConfirm) onConfirm();
+                };
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
 
         function initUI() {
             // Build Sentiment Radios
@@ -722,7 +786,8 @@
 
         function exportAllData() {
             if (feedbackRecords.length === 0) {
-                alert("No feedback records to export yet."); return;
+                showModal("Export Notice", "No feedback records are available to export yet. Please submit some entries first.", "alert");
+                return;
             }
             const csv = Papa.unparse(feedbackRecords);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -734,10 +799,10 @@
         }
 
         function clearAllData() {
-            if(confirm("Are you sure? This will delete all cached CSV data and interview drafts (saved feedbacks will remain).")) {
+            showModal("Confirm Deletion", "Are you sure? This will delete all cached CSV data and interview drafts (saved feedback records will remain intact).", "confirm", () => {
                 localStorage.removeItem('brisharks_csv_data');
                 location.reload();
-            }
+            });
         }
 
         function toggleView(view) {
