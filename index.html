@@ -41,7 +41,10 @@
       window.googletag = window.googletag || {cmd: []};
       googletag.cmd.push(function() {
         googletag.defineSlot('/23361982758/home_page_banner', [[728, 90], [300, 250]], 'div-gpt-ad-1784009244211-0').addService(googletag.pubads());
-        googletag.pubads().enableSingleRequest();
+        
+        // Updated: Replaced deprecated enableSingleRequest() with the new setConfig format
+        googletag.setConfig({singleRequest: true});
+        
         googletag.enableServices();
       });
     </script>
